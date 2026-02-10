@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  usdtapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: usdtapi
+    ports:
+      - "4000:4000"
+    environment:
+      - BINANCE_API_KEY=${BINANCE_API_KEY}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET}
+      - PORT=4000
+      - NODE_ENV=${NODE_ENV:-production}
+      - KES_PER_USDT=${KES_PER_USDT:-150}
+      - MIN_DEPOSIT_AMOUNT=${MIN_DEPOSIT_AMOUNT:-0}
+      - MIN_WITHDRAWAL_AMOUNT=${MIN_WITHDRAWAL_AMOUNT:-10}
+      - SQLITE_DB_PATH=/app/data/data.db
+    volumes:
+      # Persist SQLite database
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

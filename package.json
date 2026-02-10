@@ -1,0 +1,27 @@
+{
+  "name": "usdtapi",
+  "version": "1.0.0",
+  "description": "Backend API for verifying internal Binance USDT transfers",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "keywords": [
+    "binance",
+    "usdt",
+    "api",
+    "internal-transfer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "better-sqlite3": "^11.6.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
+
