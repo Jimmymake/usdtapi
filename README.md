@@ -73,19 +73,7 @@ The database will be persisted in the `./data` directory.
    docker build -t usdtapi .
    ```
 
-2. Run the container:
-   ```bash
-   docker run -d \
-     --name usdtapi \
-     -p 4000:4000 \
-     -e BINANCE_API_KEY=your_api_key \
-     -e BINANCE_API_SECRET=your_secret \
-     -e KES_PER_USDT=150 \
-     -e MIN_DEPOSIT_AMOUNT=0 \
-     -e MIN_WITHDRAWAL_AMOUNT=10 \
-     -v $(pwd)/data:/app/data \
-     usdtapi
-   ```
+
 
 ## API
 

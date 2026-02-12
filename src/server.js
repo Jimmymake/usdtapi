@@ -165,12 +165,8 @@ app.post("/api/deposit/txid", async (req, res) => {
   }
 
   try {
-    const now = Date.now();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     const deposits = await getDepositHistory({
       coin: "USDT",
-      startTime: now - thirtyDaysMs,
-      endTime: now + 60 * 1000,
       limit: 1000,
     });
 
@@ -221,14 +217,26 @@ app.post("/api/deposit/txid", async (req, res) => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[usdtapi] Error verifying txId", err.message || err);
-    if (err.response && err.response.data) {
+    const statusCode = err.response && err.response.status;
+    const binanceData = err.response && err.response.data;
+    if (binanceData) {
       // eslint-disable-next-line no-console
-      console.error("[usdtapi] Binance error response:", err.response.data);
+      console.error("[usdtapi] Binance error response:", binanceData);
     }
+    // HTTP 451 = Unavailable For Legal Reasons (e.g. region/jurisdiction restriction)
+    if (statusCode === 451) {
+      return res.json({
+        status: "failed",
+        reason: "region_restricted",
+        message: "Binance API is not available in this region. Access may be restricted by jurisdiction.",
+        binanceMessage: binanceData && (binanceData.msg || binanceData.message),
+      });
+    }
+    const binanceMsg = binanceData && (binanceData.msg || binanceData.message);
     return res.json({
       status: "failed",
       reason: "verification_error",
-      message: "Failed to verify transaction with Binance",
+      message: binanceMsg || "Failed to verify transaction with Binance",
       details:
         process.env.NODE_ENV === "development" ? String(err.message || err) : undefined,
     });
@@ -392,11 +400,8 @@ app.get("/api/debug/deposits", async (req, res) => {
     return res.status(404).json({ error: "Not found" });
   }
   try {
-    const now = Date.now();
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
     const deposits = await getDepositHistory({
       coin: "USDT",
-      startTime: now - thirtyDaysMs,
       limit: 50,
     });
     const safe = deposits.map((d) => ({
