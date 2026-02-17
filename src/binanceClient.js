@@ -14,7 +14,7 @@ if (!BINANCE_API_KEY || !BINANCE_API_SECRET) {
   );
 }
 
-const BINANCE_BASE_URL = "https://api.binance.com";
+const BINANCE_BASE_URL = process.env.BINANCE_BASE_URL;
 
 /**
  * Create a signed Binance query string with HMAC SHA256.
