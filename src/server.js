@@ -151,8 +151,15 @@ app.post("/api/deposit/txid", async (req, res) => {
     return res.status(400).json({ error: "txId is required" });
   }
 
+  // Normalize txId: if it doesn't start with "Off-chain transfer ", prepend it
+  const OFF_CHAIN_PREFIX = "Off-chain transfer ";
+  const normalizedTxId = txIdTrimmed.startsWith(OFF_CHAIN_PREFIX)
+    ? txIdTrimmed
+    : `${OFF_CHAIN_PREFIX}${txIdTrimmed}`;
+
   // Reject if this TxID was already processed (persists across restarts)
-  const existing = getByTxId(txIdTrimmed);
+  // Check both normalized and original versions
+  const existing = getByTxId(normalizedTxId) || getByTxId(txIdTrimmed);
   if (existing) {
     return res.json({
       status: "failed",
@@ -170,11 +177,15 @@ app.post("/api/deposit/txid", async (req, res) => {
       limit: 1000,
     });
 
+    // Search for both normalized and original versions in Binance deposits
     const match = deposits.find(
       (d) =>
         d &&
         typeof d.txId === "string" &&
-        (d.txId === txIdTrimmed || d.txId.trim() === txIdTrimmed) &&
+        (d.txId === normalizedTxId ||
+          d.txId.trim() === normalizedTxId ||
+          d.txId === txIdTrimmed ||
+          d.txId.trim() === txIdTrimmed) &&
         Number(d.status) === 1
     );
 
@@ -200,8 +211,9 @@ app.post("/api/deposit/txid", async (req, res) => {
     const rewardKes = confirmedAmount * KES_PER_USDT;
     const confirmedAt = new Date(match.insertTime || Date.now()).toISOString();
 
+    // Store the normalized version (with "Off-chain transfer " prefix) in the database
     insert({
-      txId: txIdTrimmed,
+      txId: normalizedTxId,
       asset: "USDT",
       amount: confirmedAmount,
       rewardKes,
