@@ -48,6 +48,19 @@ let MIN_WITHDRAWAL_AMOUNT = (() => {
   return initial;
 })();
 
+// Load withdrawal rate (KES per USDT) from DB if present, otherwise from env/default and persist it.
+let KES_PER_USDT_WITHDRAWAL = (() => {
+  const fromDb = getSetting("KES_PER_USDT_WITHDRAWAL");
+  if (fromDb != null) {
+    const n = Number(fromDb);
+    if (!Number.isNaN(n) && n > 0) return n;
+  }
+  const fromEnv = Number(process.env.KES_PER_USDT_WITHDRAWAL || process.env.KES_PER_USDT || "150");
+  const initial = !Number.isNaN(Number(fromEnv)) && Number(fromEnv) > 0 ? Number(fromEnv) : 150;
+  setSetting("KES_PER_USDT_WITHDRAWAL", initial);
+  return initial;
+})();
+
 /**
  * Health check
  */
@@ -79,6 +92,32 @@ app.post("/api/rate", (req, res) => {
   setSetting("KES_PER_USDT", n);
 
   return res.json({ rate: KES_PER_USDT });
+});
+
+/**
+ * GET /api/rate/withdrawal
+ * Returns the current KES per USDT rate used for withdrawals.
+ */
+app.get("/api/rate/withdrawal", (_req, res) => {
+  res.json({ rate: KES_PER_USDT_WITHDRAWAL });
+});
+
+/**
+ * POST /api/rate/withdrawal
+ * Body: { rate: number }
+ * Updates the withdrawal rate (KES per USDT) and persists it.
+ */
+app.post("/api/rate/withdrawal", (req, res) => {
+  const { rate } = req.body || {};
+  const n = Number(rate);
+  if (rate == null || rate === "" || Number.isNaN(n) || n <= 0) {
+    return res.status(400).json({ error: "rate must be a positive number" });
+  }
+
+  KES_PER_USDT_WITHDRAWAL = n;
+  setSetting("KES_PER_USDT_WITHDRAWAL", n);
+
+  return res.json({ rate: KES_PER_USDT_WITHDRAWAL });
 });
 
 /**
@@ -362,6 +401,8 @@ app.post("/api/withdraw", async (req, res) => {
       withdrawalId: result.id,
       amount: finalAmount,
       amountUnit: "USDT",
+      rate: KES_PER_USDT_WITHDRAWAL,
+      amountKes: finalAmount * KES_PER_USDT_WITHDRAWAL,
       address: addressTrimmed,
       network: detectedNetwork,
       message: "Withdrawal initiated successfully",
